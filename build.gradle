@@ -53,33 +53,14 @@ compileJava {
     options.compilerArgs << '-Xlint:deprecation' << '-Xlint:unchecked'
 }
 
-processResources {
-    filesMatching('application.yml') {
-        expand(project.properties)
-    }
-}
-
 test {
     useJUnitPlatform()
 }
 
 docker {
     name "fv-scheduler:$project.version"
-    tag 'GitLab', "registry.gitlab.com/premiums-lounge/flexvoucher/service/${project.name}:${project.version}"
     dependsOn build
     files bootJar, 'src/main/docker/entrypoint.sh'
     dockerfile file('src/main/docker/Dockerfile')
     buildArgs([FINAL_NAME: "${project.name}-${project.version}"])
-}
-
-task exportSchema(type: JavaExec) {
-    classpath = sourceSets.main.runtimeClasspath
-    main = 'com.flexvoucher.hibernate.DbSchemaExport'
-    args 'package=com.flexvoucher.scheduler.model', 'outbox'
-}
-
-task checkVersion {
-    doLast {
-        println "Project version  -> ${project.findProperty('version') ?: 'Can not find a property. Error!'}"
-    }
 }
