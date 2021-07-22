@@ -1,0 +1,85 @@
+plugins {
+    id 'java'
+    id 'io.spring.dependency-management' version '1.0.11.RELEASE'
+    id 'org.springframework.boot' version '2.3.9.RELEASE'
+    id 'com.palantir.docker' version '0.22.1'
+}
+
+version '1.0.0-SNAPSHOT'
+group = 'com.flexvoucher.service'
+sourceCompatibility = JavaVersion.VERSION_11
+targetCompatibility = JavaVersion.VERSION_11
+
+ext {
+    set('springCloudVersion', 'Hoxton.SR10')
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-security'
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'org.springframework.cloud:spring-cloud-starter-sleuth'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'org.springframework.cloud:spring-cloud-stream'
+    implementation 'org.springframework.cloud:spring-cloud-stream-binder-rabbit'
+    implementation 'org.flywaydb:flyway-core'
+    implementation 'org.postgresql:postgresql'
+
+    implementation 'io.jsonwebtoken:jjwt:0.9.1'
+    implementation 'javax.xml.bind:jaxb-api:2.3.1'
+
+    developmentOnly 'org.springframework.boot:spring-boot-devtools'
+
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+
+    testImplementation('org.springframework.boot:spring-boot-starter-test') {
+        exclude group: 'org.junit.vintage', module: 'junit-vintage-engine'
+    }
+    testImplementation 'io.zonky.test:embedded-database-spring-test:1.5.5'
+}
+
+dependencyManagement {
+    imports {
+        mavenBom "org.springframework.cloud:spring-cloud-dependencies:${springCloudVersion}"
+    }
+}
+
+compileJava {
+    options.compilerArgs << '-Xlint:deprecation' << '-Xlint:unchecked'
+}
+
+processResources {
+    filesMatching('application.yml') {
+        expand(project.properties)
+    }
+}
+
+test {
+    useJUnitPlatform()
+}
+
+docker {
+    name "fv-scheduler:$project.version"
+    tag 'GitLab', "registry.gitlab.com/premiums-lounge/flexvoucher/service/${project.name}:${project.version}"
+    dependsOn build
+    files bootJar, 'src/main/docker/entrypoint.sh'
+    dockerfile file('src/main/docker/Dockerfile')
+    buildArgs([FINAL_NAME: "${project.name}-${project.version}"])
+}
+
+task exportSchema(type: JavaExec) {
+    classpath = sourceSets.main.runtimeClasspath
+    main = 'com.flexvoucher.hibernate.DbSchemaExport'
+    args 'package=com.flexvoucher.scheduler.model', 'outbox'
+}
+
+task checkVersion {
+    doLast {
+        println "Project version  -> ${project.findProperty('version') ?: 'Can not find a property. Error!'}"
+    }
+}
