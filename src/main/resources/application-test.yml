@@ -1,6 +1,6 @@
 
 logging.level:
-  com.flexvoucher: DEBUG
+  org.zrc: DEBUG
   org.hibernate.SQL: DEBUG
   org.hibernate.type.descriptor.sql.BasicBinder: TRACE
 
